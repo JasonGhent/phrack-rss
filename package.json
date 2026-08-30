@@ -1,0 +1,10 @@
+{
+  "name": "phrack-rss",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "Unofficial RSS 2.0 feed for Phrack Magazine, published via GitHub Pages",
+  "scripts": {
+    "build": "node src/build.mjs"
+  }
+}

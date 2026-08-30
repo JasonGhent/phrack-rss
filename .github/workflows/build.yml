@@ -1,0 +1,56 @@
+name: Build & publish Phrack RSS
+
+# Phrack publishes rarely (roughly yearly), so a daily check is plenty.
+on:
+  schedule:
+    - cron: "0 6 * * *"
+  workflow_dispatch: {}
+
+# Needed to publish to GitHub Pages from Actions.
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - name: Build feed
+        env:
+          FEED_SELF_URL: https://jasonghent.github.io/phrack-rss/phrack.xml
+        run: node src/build.mjs
+      # Always upload the built feed so it can be inspected/downloaded even while
+      # Pages publishing is unavailable (e.g. a private repo on the Free plan).
+      - name: Upload feed artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: phrack-feed
+          path: public/
+      # Pages publishing requires a public repo (or Pro+ for a private one). Gated
+      # behind the PUBLISH_PAGES repo variable so runs stay green until it's set.
+      - name: Upload Pages artifact
+        if: vars.PUBLISH_PAGES == 'true'
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: public
+
+  deploy:
+    needs: build
+    if: vars.PUBLISH_PAGES == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deploy.outputs.page_url }}
+    steps:
+      - uses: actions/configure-pages@v5
+      - uses: actions/deploy-pages@v4
+        id: deploy
